@@ -1,7 +1,8 @@
-# Plugin by Sinan Nalkaya <sardok@gmail.com>
+# Plugin by Roman Szul <roman.szul@gmail.com>
+# This is improved version of of plugin by Sinan Nalkaya <sardok@gmail.com>
 # See LICENSE of Terminator package.
 
-""" logger.py - Terminator Plugin to log 'content' of individual
+""" logger_unbuffered.py - Terminator Plugin to log 'content' of individual
 terminals """
 
 import os
