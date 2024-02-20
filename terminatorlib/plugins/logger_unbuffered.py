@@ -55,39 +55,22 @@ class LoggerUnbuffered(plugin.MenuItem):
 
         menuitems.append(item)
 
-    def user_input(self, terminal, text, size):
-        if self.loggers[terminal]["pause"] or not text:
-            return
-
-        enc_char = text[-1].encode('ascii')
-        if enc_char == b'\r' or enc_char == b'\x03' or enc_char == b'\x04':
-            self.loggers[terminal]["user_typing"] = False
-        else:
-            self.loggers[terminal]["user_typing"] = True
-
-        # print(f"user_input <{text}> int {ord(text[0])}, asc: <{text.encode('ascii')}>, size: {size}")
-
     def write_content(self, terminal, row_start, col_start, row_end, col_end):
         """ Final function to write a file """
         if self.loggers[terminal]["pause"]:
+            self.loggers[terminal]["col"] = col_end
+            self.loggers[terminal]["row"] = row_end
             return
-
         content = terminal.get_text_range(row_start, col_start, row_end, col_end,
                                           lambda *a: True)
         content = content[0]
-
-        if not content:
+        if not content or '\n' not in content:
             return
-
-        if self.loggers[terminal]["user_typing"]:
-            return
-
-        fd = self.loggers[terminal]["fd"]
-        fd.write(content)
 
         self.loggers[terminal]["col"] = col_end
         self.loggers[terminal]["row"] = row_end
-
+        fd = self.loggers[terminal]["fd"]
+        fd.write(content)
 
     def save(self, terminal):
         """ 'contents-changed' callback """
@@ -118,14 +101,14 @@ class LoggerUnbuffered(plugin.MenuItem):
                 vte_terminal = Terminal.get_vte()
                 (col, row) = vte_terminal.get_cursor_position()
 
-                self.loggers[vte_terminal] = {"filepath": logfile,
-                                              "handler_id": 0, "user_input_handler_id": 0,
-                                              "fd": fd,
-                                              "col": col, "row": row, "pause": False,
-                                              "user_typing": False}
+                self.loggers[vte_terminal] = {
+                                                "filepath": logfile,
+                                                "handler_id": 0, "fd": fd,
+                                                "col": col, "row": row,
+                                                "pause": False
+                                              }
                 # Add contents-changed callback
                 self.loggers[vte_terminal]["handler_id"] = vte_terminal.connect('contents-changed', self.save)
-                self.loggers[vte_terminal]["user_input_handler_id"] = vte_terminal.connect('commit', self.user_input)
 
             except:
                 e = sys.exc_info()[1]
@@ -147,7 +130,6 @@ class LoggerUnbuffered(plugin.MenuItem):
         fd = self.loggers[vte_terminal]["fd"]
         fd.close()
         vte_terminal.disconnect(self.loggers[vte_terminal]["handler_id"])
-        vte_terminal.disconnect(self.loggers[vte_terminal]["user_input_handler_id"])
         del(self.loggers[vte_terminal])
 
     def reset_file(self, _widget, terminal):
